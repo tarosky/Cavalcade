@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -eu
+
+source tests/envs.sh
+exec docker-compose -f tests/docker-compose.yml up php
