@@ -28,11 +28,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: set PHP_VERSION
-      run: echo "::set-env name=PHP_VERSION::${{ matrix.php-version }}"
+      run: echo "PHP_VERSION=${{ matrix.php-version }}" >> $GITHUB_ENV
     - name: set WP_VERSION
-      run: echo "::set-env name=WP_VERSION::${{ matrix.wp-version }}"
+      run: echo "WP_VERSION=${{ matrix.wp-version }}" >> $GITHUB_ENV
     - name: set WP_MULTISITE
-      run: echo "::set-env name=WP_MULTISITE::${{ matrix.wp-multisite }}"
+      run: echo "WP_MULTISITE=${{ matrix.wp-multisite }}" >> $GITHUB_ENV
     - name: Build docker image
       run: docker-compose -f test/docker-compose.yml build
     - name: Run PHPUnit inside Docker Compose
