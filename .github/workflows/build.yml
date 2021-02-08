@@ -34,9 +34,9 @@ jobs:
     - name: set WP_MULTISITE
       run: echo "WP_MULTISITE=${{ matrix.wp-multisite }}" >> $GITHUB_ENV
     - name: Build docker image
-      run: docker-compose -f test/docker-compose.yml build
+      run: docker-compose -f tests/build-image
     - name: Run PHPUnit inside Docker Compose
-      run: docker-compose -f test/docker-compose.yml run php
+      run: docker-compose -f tests/run
     - name: Create package
       run: scripts/package
     - uses: actions/upload-artifact@v2
