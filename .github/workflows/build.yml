@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+    - forked/master
+  push:
+    branches:
+    - forked/master
+    - issue/*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version:
+        - '7.3'
+        - '7.4'
+        # - '8.0'
+        wp-multisite:
+        - '0'
+        - '1'
+        wp-version:
+        - latest
+        - trunk
+    steps:
+    - uses: actions/checkout@v2
+    - name: set PHP_VERSION
+      run: echo "PHP_VERSION=${{ matrix.php-version }}" >> $GITHUB_ENV
+    - name: set WP_VERSION
+      run: echo "WP_VERSION=${{ matrix.wp-version }}" >> $GITHUB_ENV
+    - name: set WP_MULTISITE
+      run: echo "WP_MULTISITE=${{ matrix.wp-multisite }}" >> $GITHUB_ENV
+    - name: Build docker image
+      run: scripts/build-test-image
+    - name: Run PHPUnit inside Docker Compose
+      run: scripts/run-test
+    - name: Create package
+      run: scripts/package
+    - uses: actions/upload-artifact@v2
+      with:
+        name: artifact
+        path: work/cavalcade.zip
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/forked/master'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: artifact
+    - name: Show artifacts
+      run: ls -laR ./
+    - name: Generate build number
+      uses: einaregilsson/build-number@v3
+      with:
+        token: ${{secrets.GITHUB_TOKEN}}
+        prefix: build_number_generator
+    - name: Print new build number
+      run: echo "Build number is $BUILD_NUMBER"
+    - id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      with:
+        tag_name: build-${{env.BUILD_NUMBER}}
+        release_name: Build ${{env.BUILD_NUMBER}}
+        draft: false
+        prerelease: false
+    - uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      with:
+        upload_url: ${{steps.create_release.outputs.upload_url}}
+        asset_path: ./cavalcade.zip
+        asset_name: cavalcade.build-${{env.BUILD_NUMBER}}.zip
+        asset_content_type: application/zip

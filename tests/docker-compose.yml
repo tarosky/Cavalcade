@@ -1,0 +1,23 @@
+version: '3.9'
+services:
+  php:
+    build:
+      context: $PWD
+      dockerfile: tests/Dockerfile
+      args:
+        uid: $USER_ID
+        gid: $GROUP_ID
+        php_version: $PHP_VERSION
+        wp_version: $WP_VERSION
+    environment:
+      - WP_MULTISITE=$WP_MULTISITE
+    user: $USER_ID:$GROUP_ID
+    volumes:
+    - $PWD:/workspace
+    depends_on:
+    - db
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wordpress
