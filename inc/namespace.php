@@ -68,6 +68,16 @@ function is_installed() {
 	return $installed;
 }
 
+/**
+ * This code is for testing purpose
+ */
+function drop_tables() {
+	global $wpdb;
+
+	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->base_prefix}cavalcade_jobs`" );
+	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->base_prefix}cavalcade_logs`" );
+}
+
 function create_tables() {
 	if ( ! is_blog_installed() ) {
 		// Do not create tables before blog is installed.
@@ -90,11 +100,12 @@ function create_tables() {
 		`interval` int unsigned DEFAULT NULL,
 		`status` varchar(255) NOT NULL DEFAULT 'waiting',
 		`schedule` varchar(255) DEFAULT NULL,
+		`deleted_at` datetime DEFAULT NULL,
 
 		PRIMARY KEY (`id`),
-		KEY `status` (`status`),
-		KEY `site` (`site`),
-		KEY `hook` (`hook`)
+		KEY `status` (`status`, `deleted_at`),
+		KEY `site` (`site`, `deleted_at`),
+		KEY `hook` (`hook`, `deleted_at`)
 	) ENGINE=InnoDB {$charset_collate};\n";
 
 	// TODO: check return value

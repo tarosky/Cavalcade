@@ -320,11 +320,15 @@ function pre_clear_scheduled_hook( $pre, $hook, $args, $wp_error = false ) {
 	// Clear all scheduled events for this site
 	$table = Job::get_table();
 
-	$sql = "DELETE FROM `{$table}` WHERE site = %d";
+
+	$sql = "UPDATE `{$table}` SET deleted_at = %s WHERE site = %d";
+	$sql_params[] = date( Cavalcade\DATE_FORMAT );
 	$sql_params[] = get_current_blog_id();
 
 	$sql .= ' AND id IN(' . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ')';
 	$sql_params = array_merge( $sql_params, $ids );
+
+	$sql .= ' AND deleted_at IS NULL';
 
 	$query = $wpdb->prepare( $sql, $sql_params );
 	$results = $wpdb->query( $query );
@@ -473,8 +477,6 @@ function pre_get_ready_cron_jobs( $pre ) {
  * @return stdClass Event object passed in (as we aren't hijacking it)
  */
 function schedule_event( $event ) {
-	global $wpdb;
-
 	if ( ! empty( $event->schedule ) ) {
 		return schedule_recurring_event( $event );
 	}
@@ -490,11 +492,6 @@ function schedule_event( $event ) {
 }
 
 function schedule_recurring_event( $event ) {
-	global $wpdb;
-
-	$schedules = wp_get_schedules();
-	$schedule = $event->schedule;
-
 	$job = new Job();
 	$job->hook = $event->hook;
 	$job->site = get_current_blog_id();

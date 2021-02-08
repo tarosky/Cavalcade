@@ -92,7 +92,7 @@ class Command extends WP_CLI_Command {
 	/**
 	 * Show jobs.
 	 *
-	 * @synopsis [--format=<format>] [--id=<job-id>] [--site=<site-id>] [--hook=<hook>] [--status=<status>] [--limit=<limit>] [--page=<page>] [--order=<order>] [--orderby=<orderby>]
+	 * @synopsis [--format=<format>] [--id=<job-id>] [--site=<site-id>] [--hook=<hook>] [--status=<status>] [--deleted=<true|false>] [--limit=<limit>] [--page=<page>] [--order=<order>] [--orderby=<orderby>]
 	 */
 	public function jobs( $args, $assoc_args ) {
 
@@ -102,11 +102,12 @@ class Command extends WP_CLI_Command {
 			$assoc_args,
 			[
 				'format'  => 'table',
-				'fields'  => 'id,site,hook,start,nextrun,status',
+				'fields'  => 'id,site,hook,start,nextrun,status,deleted_at',
 				'id'      => null,
 				'site'    => null,
 				'hook'    => null,
 				'status'  => null,
+				'deleted' => null,
 				'limit'   => 20,
 				'page'    => 1,
 				'order'   => null,
@@ -153,6 +154,14 @@ class Command extends WP_CLI_Command {
 			$data[]  = $assoc_args['status'];
 		}
 
+		if ( $assoc_args['deleted'] ) {
+			if ( $assoc_args['deleted'] == 'true' ) {
+				$where[] = 'deleted_at IS NOT NULL';
+			} elseif ( $assoc_args['deleted'] == 'false' ) {
+				$where[] = 'deleted_at IS NULL';
+			}
+		}
+
 		if ( $assoc_args['order'] && in_array( strtoupper( $assoc_args['order'] ), $_order, true ) ) {
 			$order = strtoupper( $assoc_args['order'] );
 		}
@@ -174,12 +183,12 @@ class Command extends WP_CLI_Command {
 			$query = $wpdb->prepare( $query, $data );
 		}
 
-		$logs = $wpdb->get_results( $query );
+		$jobs = $wpdb->get_results( $query );
 
-		if ( empty( $logs ) ) {
+		if ( empty( $jobs ) ) {
 			\WP_CLI::error( 'No Cavalcade jobs found.' );
 		} else {
-			\WP_CLI\Utils\format_items( $assoc_args['format'], $logs, explode( ',', $assoc_args['fields'] ) );
+			\WP_CLI\Utils\format_items( $assoc_args['format'], $jobs, explode( ',', $assoc_args['fields'] ) );
 		}
 
 	}

@@ -6,7 +6,7 @@ sed 's/class Tests_Cron/abstract class Tests_Cron/' \
     /wp-develop/tests/phpunit/tests/cron.php \
     > /workspace/tests/tests/wp-core-cron.php
 cd /workspace
-composer install
+composer --no-cache install
 mkdir -p work
 wait-for-it -q db:3306
 exec vendor/bin/phpunit --exclude-group 32656 --log-junit work/test-result.xml
