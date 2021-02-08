@@ -5,6 +5,7 @@ WORKDIR /workspace
 
 RUN apt-get update && apt-get install -y \
   default-mysql-client \
+  git \
   libzip-dev \
   unzip \
   wait-for-it
