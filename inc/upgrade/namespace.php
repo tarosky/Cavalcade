@@ -37,6 +37,10 @@ function upgrade_database() {
 		upgrade_database_4();
 	}
 
+	if ( $database_version < 5 ) {
+		upgrade_database_5();
+	}
+
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
 
 	Job::flush_query_cache();
@@ -97,6 +101,26 @@ function upgrade_database_4() {
 
 	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
 			  DROP INDEX `nextrun`";
+
+	$wpdb->query( $query );
+}
+
+/**
+ * Upgrade Cavalcade database tables to version 5.
+ *
+ * Add `deleted_at` column in the jobs table.
+ */
+function upgrade_database_5() {
+	global $wpdb;
+
+	$query = "ALTER TABLE `cavalcade_jobs`
+			  DROP INDEX `status`,
+			  DROP INDEX `site`,
+			  DROP INDEX `hook`,
+			  ADD `deleted_at` datetime DEFAULT NULL,
+			  ADD INDEX `status` (`status`, `deleted_at`),
+			  ADD INDEX `site` (`site`, `deleted_at`),
+			  ADD INDEX `hook` (`hook`, `deleted_at`)";
 
 	$wpdb->query( $query );
 }

@@ -85,10 +85,14 @@ class Job {
 			return new WP_Error( 'cavalcade.job.delete.still_running', __( 'Cannot delete running jobs', 'cavalcade' ) );
 		}
 
+		$data = [
+			'deleted_at' => date( DATE_FORMAT ),
+		];
+
 		$where = [
 			'id' => $this->id,
 		];
-		$result = $wpdb->delete( $this->get_table(), $where, $this->row_format( $where ) );
+		$result = $wpdb->update( $this->get_table(), $data, $where, $this->row_format( $data ), $this->row_format( $where ) );
 
 		self::flush_query_cache();
 		wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
@@ -347,6 +351,8 @@ class Job {
 		$sql .= ' AND status IN(' . implode( ',', array_fill( 0, count( $args['statuses'] ), '%s' ) ) . ')';
 		$sql_params = array_merge( $sql_params, $args['statuses'] );
 
+		$sql .= ' AND deleted_at IS NULL';
+
 		$sql .= ' ORDER BY nextrun';
 		if ( $args['order'] === 'DESC' ) {
 			$sql .= ' DESC';
@@ -401,6 +407,7 @@ class Job {
 			'interval' => '%d',
 			'schedule' => '%s',
 			'status' => '%s',
+			'deleted_at' => '%s',
 		];
 
 		if ( isset( $columns[ $column ] ) ) {

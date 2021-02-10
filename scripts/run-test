@@ -3,4 +3,4 @@
 set -eu
 
 source tests/envs.sh
-exec docker-compose -f tests/docker-compose.yml up --exit-code-from php php
+exec docker-compose -f tests/docker-compose.yml run php

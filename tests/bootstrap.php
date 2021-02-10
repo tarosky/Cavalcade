@@ -18,6 +18,7 @@ require '/wp-tests/includes/functions.php';
 tests_add_filter( 'muplugins_loaded', function () {
 	require_once dirname( __DIR__ ) . '/plugin.php';
 	// Call create tables before each run.
+	HM\Cavalcade\Plugin\drop_tables();
 	HM\Cavalcade\Plugin\create_tables();
 });
 
