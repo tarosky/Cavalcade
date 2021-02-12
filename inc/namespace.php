@@ -95,11 +95,13 @@ function create_tables() {
 		`hook` varchar(255) NOT NULL,
 		`args` longtext NOT NULL,
 
-		`start` datetime NOT NULL,
 		`nextrun` datetime NOT NULL,
 		`interval` int unsigned DEFAULT NULL,
 		`status` varchar(255) NOT NULL DEFAULT 'waiting',
 		`schedule` varchar(255) DEFAULT NULL,
+		`registered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		`revised_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		`started_at` datetime DEFAULT NULL,
 		`finished_at` datetime DEFAULT NULL,
 		`deleted_at` datetime DEFAULT NULL,
 
