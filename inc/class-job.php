@@ -407,6 +407,7 @@ class Job {
 			'interval' => '%d',
 			'schedule' => '%s',
 			'status' => '%s',
+			'finished_at' => '%s',
 			'deleted_at' => '%s',
 		];
 
