@@ -485,7 +485,6 @@ function schedule_event( $event ) {
 	$job->hook = $event->hook;
 	$job->site = get_current_blog_id();
 	$job->nextrun = $event->timestamp;
-	$job->start = $job->nextrun;
 	$job->args = $event->args;
 
 	$job->save();
@@ -496,7 +495,6 @@ function schedule_recurring_event( $event ) {
 	$job->hook = $event->hook;
 	$job->site = get_current_blog_id();
 	$job->nextrun = $event->timestamp;
-	$job->start = $job->nextrun;
 	$job->interval = $event->interval;
 	$job->args = $event->args;
 

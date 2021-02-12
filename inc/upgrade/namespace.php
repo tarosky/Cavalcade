@@ -45,6 +45,10 @@ function upgrade_database() {
 		upgrade_database_6();
 	}
 
+	if ( $database_version < 7 ) {
+		upgrade_database_7();
+	}
+
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
 
 	Job::flush_query_cache();
@@ -140,6 +144,23 @@ function upgrade_database_6() {
 	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
 			  ADD `finished_at` datetime DEFAULT NULL AFTER `schedule`,
 			  ADD INDEX `status-finished_at` (`status`, `finished_at`)";
+
+	$wpdb->query( $query );
+}
+
+/**
+ * Upgrade Cavalcade database tables to version 7.
+ *
+ * Add lifecycle timestamps.
+ */
+function upgrade_database_7() {
+	global $wpdb;
+
+	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
+			  DROP `start`,
+			  ADD `started_at` datetime DEFAULT NULL AFTER `schedule`,
+			  ADD `revised_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `schedule`,
+			  ADD `registered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `schedule`";
 
 	$wpdb->query( $query );
 }

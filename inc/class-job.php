@@ -12,7 +12,6 @@ class Job {
 	public $site;
 	public $hook;
 	public $args;
-	public $start;
 	public $nextrun;
 	public $interval;
 	public $schedule;
@@ -46,7 +45,6 @@ class Job {
 		$data = [
 			'hook'    => $this->hook,
 			'site'    => $this->site,
-			'start'   => gmdate( DATE_FORMAT, $this->start ),
 			'nextrun' => gmdate( DATE_FORMAT, $this->nextrun ),
 			'args'    => serialize( $this->args ),
 		];
@@ -59,6 +57,7 @@ class Job {
 		}
 
 		if ( $this->is_created() ) {
+			$data['revised_at'] = date( DATE_FORMAT );
 			$where = [
 				'id' => $this->id,
 			];
@@ -118,7 +117,6 @@ class Job {
 		$job->site     = $row->site;
 		$job->hook     = $row->hook;
 		$job->args     = unserialize( $row->args );
-		$job->start    = mysql2date( 'G', $row->start );
 		$job->nextrun  = mysql2date( 'G', $row->nextrun );
 		$job->interval = $row->interval;
 		$job->status   = $row->status;
@@ -402,11 +400,13 @@ class Job {
 			'site' => '%d',
 			'hook' => '%s',
 			'args' => '%s',
-			'start' => '%s',
 			'nextrun' => '%s',
 			'interval' => '%d',
 			'schedule' => '%s',
 			'status' => '%s',
+			'registered_at' => '%s',
+			'revised_at' => '%s',
+			'started_at' => '%s',
 			'finished_at' => '%s',
 			'deleted_at' => '%s',
 		];
