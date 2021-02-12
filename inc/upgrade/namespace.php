@@ -41,6 +41,10 @@ function upgrade_database() {
 		upgrade_database_5();
 	}
 
+	if ( $database_version < 6 ) {
+		upgrade_database_6();
+	}
+
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
 
 	Job::flush_query_cache();
@@ -113,7 +117,7 @@ function upgrade_database_4() {
 function upgrade_database_5() {
 	global $wpdb;
 
-	$query = "ALTER TABLE `cavalcade_jobs`
+	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
 			  DROP INDEX `status`,
 			  DROP INDEX `site`,
 			  DROP INDEX `hook`,
@@ -121,6 +125,21 @@ function upgrade_database_5() {
 			  ADD INDEX `status` (`status`, `deleted_at`),
 			  ADD INDEX `site` (`site`, `deleted_at`),
 			  ADD INDEX `hook` (`hook`, `deleted_at`)";
+
+	$wpdb->query( $query );
+}
+
+/**
+ * Upgrade Cavalcade database tables to version 6.
+ *
+ * Add `finished_at` column in the jobs table.
+ */
+function upgrade_database_6() {
+	global $wpdb;
+
+	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
+			  ADD `finished_at` datetime DEFAULT NULL AFTER `schedule`,
+			  ADD INDEX `status-finished_at` (`status`, `finished_at`)";
 
 	$wpdb->query( $query );
 }

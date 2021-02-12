@@ -102,7 +102,7 @@ class Command extends WP_CLI_Command {
 			$assoc_args,
 			[
 				'format'  => 'table',
-				'fields'  => 'id,site,hook,start,nextrun,status,deleted_at',
+				'fields'  => 'id,site,hook,start,nextrun,status,finished_at,deleted_at',
 				'id'      => null,
 				'site'    => null,
 				'hook'    => null,

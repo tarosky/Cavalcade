@@ -100,10 +100,12 @@ function create_tables() {
 		`interval` int unsigned DEFAULT NULL,
 		`status` varchar(255) NOT NULL DEFAULT 'waiting',
 		`schedule` varchar(255) DEFAULT NULL,
+		`finished_at` datetime DEFAULT NULL,
 		`deleted_at` datetime DEFAULT NULL,
 
 		PRIMARY KEY (`id`),
 		KEY `status` (`status`, `deleted_at`),
+		KEY `status-finished_at` (`status`, `finished_at`),
 		KEY `site` (`site`, `deleted_at`),
 		KEY `hook` (`hook`, `deleted_at`)
 	) ENGINE=InnoDB {$charset_collate};\n";
