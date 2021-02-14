@@ -45,51 +45,6 @@ class Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Show logs on completed jobs
-	 *
-	 * @synopsis [--format=<format>] [--fields=<fields>] [--job=<job-id>] [--hook=<hook>]
-	 */
-	public function log( $args, $assoc_args ) {
-
-		global $wpdb;
-
-		$log_table = $wpdb->base_prefix . 'cavalcade_logs';
-		$job_table = $wpdb->base_prefix . 'cavalcade_jobs';
-
-		$assoc_args = wp_parse_args( $assoc_args, [
-			'format'  => 'table',
-			'fields'  => 'job,hook,timestamp,status',
-			'hook'    => null,
-			'job'     => null,
-		]);
-
-		$where = [];
-		$data  = [];
-
-		if ( $assoc_args['job'] ) {
-			$where[] = 'job = %d';
-			$data[]  = $assoc_args['job'];
-		}
-
-		if ( $assoc_args['hook'] ) {
-			$where[] = 'hook = %s';
-			$data[] = $assoc_args['hook'];
-		}
-
-		$where = $where ? 'WHERE ' . implode( ' AND ', $where ) : '';
-
-		$query = "SELECT $log_table.*, $job_table.hook,$job_table.args FROM {$wpdb->base_prefix}cavalcade_logs INNER JOIN $job_table ON $log_table.job = $job_table.id $where";
-
-		if ( $data ) {
-			$query = $wpdb->prepare( $query, $data );
-		}
-
-		$logs = $wpdb->get_results( $query );
-
-		\WP_CLI\Utils\format_items( $assoc_args['format'], $logs, explode( ',', $assoc_args['fields'] ) );
-	}
-
-	/**
 	 * Show jobs.
 	 *
 	 * @synopsis [--format=<format>] [--id=<job-id>] [--site=<site-id>] [--hook=<hook>] [--status=<status>] [--deleted=<true|false>] [--limit=<limit>] [--page=<page>] [--order=<order>] [--orderby=<orderby>]

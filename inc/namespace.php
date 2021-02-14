@@ -115,19 +115,6 @@ function create_tables() {
 	// TODO: check return value
 	$wpdb->query( $query );
 
-	$query = "CREATE TABLE IF NOT EXISTS `{$wpdb->base_prefix}cavalcade_logs` (
-		`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-		`job` bigint(20) NOT NULL,
-		`status` varchar(255) NOT NULL DEFAULT '',
-		`timestamp` datetime NOT NULL,
-		`content` longtext NOT NULL,
-		PRIMARY KEY (`id`),
-		KEY `job` (`job`),
-		KEY `status` (`status`)
-	) ENGINE=InnoDB {$charset_collate};\n";
-
-	$wpdb->query( $query );
-
 	wp_cache_set( 'installed', true, 'cavalcade' );
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
 
