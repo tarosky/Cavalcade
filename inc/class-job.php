@@ -71,18 +71,9 @@ class Job {
 		wp_cache_set( "job::{$this->id}", $this, 'cavalcade-jobs' );
 	}
 
-	public function delete( $options = [] ) {
+	public function delete() {
 		global $wpdb;
 		$wpdb->show_errors();
-
-		$defaults = [
-			'delete_running' => false,
-		];
-		$options = wp_parse_args( $options, $defaults );
-
-		if ( $this->status === 'running' && ! $options['delete_running'] ) {
-			return new WP_Error( 'cavalcade.job.delete.still_running', __( 'Cannot delete running jobs', 'cavalcade' ) );
-		}
 
 		$data = [
 			'deleted_at' => date( DATE_FORMAT ),

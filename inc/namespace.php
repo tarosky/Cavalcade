@@ -75,7 +75,6 @@ function drop_tables() {
 	global $wpdb;
 
 	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->base_prefix}cavalcade_jobs`" );
-	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->base_prefix}cavalcade_logs`" );
 }
 
 function create_tables() {
