@@ -96,7 +96,7 @@ function create_tables() {
 
 		`nextrun` datetime NOT NULL,
 		`interval` int unsigned DEFAULT NULL,
-		`status` varchar(255) NOT NULL DEFAULT 'waiting',
+		`status` enum('waiting','running','done') NOT NULL DEFAULT 'waiting',
 		`schedule` varchar(255) DEFAULT NULL,
 		`registered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		`revised_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
