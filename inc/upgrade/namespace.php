@@ -8,6 +8,7 @@ namespace HM\Cavalcade\Plugin\Upgrade;
 use const HM\Cavalcade\Plugin\DATABASE_VERSION;
 use HM\Cavalcade\Plugin as Cavalcade;
 use HM\Cavalcade\Plugin\Job;
+use WP_CLI;
 
 /**
  * Update the Cavalcade database version if required.
@@ -53,6 +54,10 @@ function upgrade_database() {
 		upgrade_database_9();
 	}
 
+	if ( $database_version < 10 ) {
+		upgrade_database_10();
+	}
+
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
 
 	Job::flush_query_cache();
@@ -72,7 +77,10 @@ function upgrade_database_2() {
 	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
 			  ADD `schedule` varchar(255) DEFAULT NULL";
 
-	$wpdb->query( $query );
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 2: $wpdb->last_error" );
+	}
 
 	$schedules = Cavalcade\get_schedules_by_interval();
 
@@ -82,9 +90,12 @@ function upgrade_database_2() {
 				  WHERE `interval` = %d
 				  AND `status` NOT IN ( 'failed', 'completed' )";
 
-		$wpdb->query(
+		$res = $wpdb->query(
 			$wpdb->prepare( $query, $name, $interval )
 		);
+		if ( $res === false ) {
+			WP_CLI::error( "Error on 2: $wpdb->last_error" );
+		}
 	}
 }
 
@@ -100,7 +111,10 @@ function upgrade_database_3() {
 			  ADD INDEX `site` (`site`),
 			  ADD INDEX `hook` (`hook`)";
 
-	$wpdb->query( $query );
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 3: $wpdb->last_error" );
+	}
 }
 
 /**
@@ -114,7 +128,10 @@ function upgrade_database_4() {
 	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
 			  DROP INDEX `nextrun`";
 
-	$wpdb->query( $query );
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 4: $wpdb->last_error" );
+	}
 }
 
 /**
@@ -134,7 +151,10 @@ function upgrade_database_5() {
 			  ADD INDEX `site` (`site`, `deleted_at`),
 			  ADD INDEX `hook` (`hook`, `deleted_at`)";
 
-	$wpdb->query( $query );
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 5: $wpdb->last_error" );
+	}
 }
 
 /**
@@ -149,7 +169,10 @@ function upgrade_database_6() {
 			  ADD `finished_at` datetime DEFAULT NULL AFTER `schedule`,
 			  ADD INDEX `status-finished_at` (`status`, `finished_at`)";
 
-	$wpdb->query( $query );
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 6: $wpdb->last_error" );
+	}
 }
 
 /**
@@ -166,7 +189,10 @@ function upgrade_database_7() {
 			  ADD `revised_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `schedule`,
 			  ADD `registered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `schedule`";
 
-	$wpdb->query( $query );
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 7: $wpdb->last_error" );
+	}
 }
 
 /**
@@ -179,5 +205,42 @@ function upgrade_database_9() {
 
 	$query = "DROP TABLE IF EXISTS `{$wpdb->base_prefix}cavalcade_logs`";
 
-	$wpdb->query( $query );
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 9: $wpdb->last_error" );
+	}
+}
+
+/**
+ * Upgrade Cavalcade database tables to version 10.
+ *
+ * Delete old-formatted data.
+ */
+function upgrade_database_10() {
+	global $wpdb;
+
+	$query = "DELETE FROM `{$wpdb->base_prefix}cavalcade_jobs`
+			  WHERE finished_at is NULL AND status IN ('completed', 'failed')";
+
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 10-1: $wpdb->last_error" );
+	}
+
+	$query = "UPDATE `{$wpdb->base_prefix}cavalcade_jobs`
+			  SET status = 'done'
+			  WHERE status IN ('completed', 'failed')";
+
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 10-2: $wpdb->last_error" );
+	}
+
+	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
+			  MODIFY status enum('waiting','running','done') NOT NULL DEFAULT 'waiting'";
+
+	$res = $wpdb->query( $query );
+	if ( $res === false ) {
+		WP_CLI::error( "Error on 10-3: $wpdb->last_error" );
+	}
 }

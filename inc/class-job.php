@@ -170,12 +170,9 @@ class Job {
 	 * Get jobs by site ID
 	 *
 	 * @param int|stdClass $site Site ID, or site object from {@see get_blog_details}
-	 * @param bool $include_completed Should we include completed jobs?
-	 * @param bool $include_failed Should we include failed jobs?
-	 * @param bool $exclude_future Should we exclude future (not ready) jobs?
 	 * @return Job[]|WP_Error Jobs on success, error otherwise.
 	 */
-	public static function get_by_site( $site, $include_completed = false, $include_failed = false, $exclude_future = false ) {
+	public static function get_by_site( $site ) {
 
 		// Allow passing a site object in
 		if ( is_object( $site ) && isset( $site->blog_id ) ) {
@@ -193,16 +190,6 @@ class Job {
 			'limit' => 0,
 			'__raw' => true,
 		];
-
-		if ( $include_completed ) {
-			$args['statuses'][] = 'completed';
-		}
-		if ( $include_failed ) {
-			$args['statuses'][] = 'failed';
-		}
-		if ( $exclude_future ) {
-			$args['timestamp'] = 'past';
-		}
 
 		$results = static::get_jobs_by_query( $args );
 
@@ -265,7 +252,7 @@ class Job {
 		 *     @param array            $args      Cron job arguments.
 		 *     @param int|object       $site      Site to query. Default current site.
 		 *     @param array            $statuses  Job statuses to query. Default to waiting and running.
-		 *                                        Possible values are 'waiting', 'running', 'completed' and 'failed'.
+		 *                                        Possible values are 'waiting', 'running', and 'done'.
 		 *     @param int              $limit     Max number of jobs to return. Default 1.
 		 *     @param string           $order     ASC or DESC. Default ASC.
 		 *     @param bool             $__raw     If true return the raw array of data rather than Job objects.
