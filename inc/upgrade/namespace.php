@@ -49,6 +49,10 @@ function upgrade_database() {
 		upgrade_database_7();
 	}
 
+	if ( $database_version < 9 ) {
+		upgrade_database_9();
+	}
+
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
 
 	Job::flush_query_cache();
@@ -161,6 +165,19 @@ function upgrade_database_7() {
 			  ADD `started_at` datetime DEFAULT NULL AFTER `schedule`,
 			  ADD `revised_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `schedule`,
 			  ADD `registered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `schedule`";
+
+	$wpdb->query( $query );
+}
+
+/**
+ * Upgrade Cavalcade database tables to version 9.
+ *
+ * Drop unused table.
+ */
+function upgrade_database_9() {
+	global $wpdb;
+
+	$query = "DROP TABLE IF EXISTS `{$wpdb->base_prefix}cavalcade_logs`";
 
 	$wpdb->query( $query );
 }
