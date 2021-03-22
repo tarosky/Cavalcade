@@ -89,10 +89,12 @@ function create_tables() {
 
 	$query = "CREATE TABLE IF NOT EXISTS `{$wpdb->base_prefix}cavalcade_jobs` (
 		`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-		`site` bigint(20) unsigned NOT NULL,
 
+		`site` bigint(20) unsigned NOT NULL,
 		`hook` varchar(255) NOT NULL,
+		`hook_instance` varchar(255) DEFAULT NULL,
 		`args` longtext NOT NULL,
+		`args_digest` char(64) NOT NULL,
 
 		`nextrun` datetime NOT NULL,
 		`interval` int unsigned DEFAULT NULL,
@@ -105,6 +107,7 @@ function create_tables() {
 		`deleted_at` datetime DEFAULT NULL,
 
 		PRIMARY KEY (`id`),
+		UNIQUE KEY `uniqueness` (`site`, `hook`, `hook_instance`, `args_digest`),
 		KEY `status` (`status`, `deleted_at`),
 		KEY `status-finished_at` (`status`, `finished_at`),
 		KEY `site` (`site`, `deleted_at`),

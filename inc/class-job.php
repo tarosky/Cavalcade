@@ -11,6 +11,7 @@ class Job {
 	public $id;
 	public $site;
 	public $hook;
+	public $hook_instance;
 	public $args;
 	public $nextrun;
 	public $interval;
@@ -49,11 +50,15 @@ class Job {
 			'args'    => serialize( $this->args ),
 		];
 
+		$data['args_digest'] = hash( 'sha256', $data['args'] );
+
 		if ( $this->is_recurring() ) {
 			$data['interval'] = $this->interval;
 			if ( get_database_version() >= 2 ) {
 				$data['schedule'] = $this->schedule;
 			}
+		} else {
+			$data['hook_instance'] = $this->hook_instance;
 		}
 
 		if ( $this->is_created() ) {
@@ -105,12 +110,13 @@ class Job {
 		$job = new Job( $row->id );
 
 		// Populate the object with row values
-		$job->site     = $row->site;
-		$job->hook     = $row->hook;
-		$job->args     = unserialize( $row->args );
-		$job->nextrun  = mysql2date( 'G', $row->nextrun );
-		$job->interval = $row->interval;
-		$job->status   = $row->status;
+		$job->site          = $row->site;
+		$job->hook          = $row->hook;
+		$job->hook_instance = $row->hook_instance;
+		$job->args          = unserialize( $row->args );
+		$job->nextrun       = mysql2date( 'G', $row->nextrun );
+		$job->interval      = $row->interval;
+		$job->status        = $row->status;
 
 		if ( ! $row->interval ) {
 			// One off event.
@@ -294,6 +300,15 @@ class Job {
 			$sql_params[] = $args['hook'];
 		}
 
+		if ( array_key_exists( 'hook_instance', $args ) ) {
+			if ( $args['hook_instance'] === null ) {
+				$sql .= ' AND hook_instance IS NULL';
+			} else {
+				$sql .= ' AND hook_instance = %s';
+				$sql_params[] = $args['hook_instance'];
+			}
+		}
+
 		if ( ! is_null( $args['args'] ) ) {
 			$sql .= ' AND args = %s';
 			$sql_params[] = serialize( $args['args'] );
@@ -377,7 +392,9 @@ class Job {
 			'id'   => '%d',
 			'site' => '%d',
 			'hook' => '%s',
+			'hook_instance' => '%s',
 			'args' => '%s',
+			'args_digest' => '%s',
 			'nextrun' => '%s',
 			'interval' => '%d',
 			'schedule' => '%s',

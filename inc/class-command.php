@@ -57,7 +57,7 @@ class Command extends WP_CLI_Command {
 			$assoc_args,
 			[
 				'format'  => 'table',
-				'fields'  => 'id,site,hook,nextrun,status,registered_at,revised_at,started_at,finished_at,deleted_at',
+				'fields'  => 'id,site,hook,hook_instance,nextrun,status,registered_at,revised_at,started_at,finished_at,deleted_at',
 				'id'      => null,
 				'site'    => null,
 				'hook'    => null,
@@ -80,6 +80,7 @@ class Command extends WP_CLI_Command {
 			'id',
 			'site',
 			'hook',
+			'hook_instance',
 			'args',
 			'nextrun',
 			'interval',
