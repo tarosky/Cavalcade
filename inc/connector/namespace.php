@@ -179,11 +179,19 @@ function pre_reschedule_event( $pre, $event, $wp_error = false ) {
 		return $pre;
 	}
 
+	if ( $event->schedule === false ) {
+		return new WP_Error(
+			'false schedule is not allowed',
+			__( 'Rescheduling to false schedule is not allowed.' )
+		);
+	}
+
 	// First check if the job exists already.
 	$jobs = Job::get_jobs_by_query( [
 		'hook' => $event->hook,
 		'timestamp' => $event->timestamp,
 		'args' => $event->args,
+		'hook_instance' => null,
 	] );
 
 	if ( is_wp_error( $jobs ) || empty( $jobs ) ) {
@@ -482,25 +490,25 @@ function schedule_event( $event ) {
 	}
 
 	$job = new Job();
-	$job->hook = $event->hook;
 	$job->site = get_current_blog_id();
-	$job->nextrun = $event->timestamp;
+	$job->hook = $event->hook;
+	$job->hook_instance = gmdate( Cavalcade\DATE_FORMAT, $event->timestamp );
 	$job->args = $event->args;
+
+	$job->nextrun = $event->timestamp;
 
 	$job->save();
 }
 
 function schedule_recurring_event( $event ) {
 	$job = new Job();
-	$job->hook = $event->hook;
 	$job->site = get_current_blog_id();
-	$job->nextrun = $event->timestamp;
-	$job->interval = $event->interval;
+	$job->hook = $event->hook;
 	$job->args = $event->args;
 
-	if ( Cavalcade\get_database_version() >= 2 ) {
-		$job->schedule = $event->schedule;
-	}
+	$job->nextrun = $event->timestamp;
+	$job->interval = $event->interval;
+	$job->schedule = $event->schedule;
 
 	$job->save();
 }
