@@ -110,10 +110,11 @@ class Command extends WP_CLI_Command {
 		}
 
 		if ( $assoc_args['deleted'] ) {
+			$empty_deleted_at = EMPTY_DELETED_AT;
 			if ( $assoc_args['deleted'] == 'true' ) {
-				$where[] = 'deleted_at IS NOT NULL';
+				$where[] = "deleted_at != '$empty_deleted_at'";
 			} elseif ( $assoc_args['deleted'] == 'false' ) {
-				$where[] = 'deleted_at IS NULL';
+				$where[] = "deleted_at = '$empty_deleted_at'";
 			}
 		}
 

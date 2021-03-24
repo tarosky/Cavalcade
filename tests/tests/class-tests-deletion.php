@@ -2,6 +2,7 @@
 namespace HM\Cavalcade\Tests;
 
 use WP_UnitTestCase;
+use const HM\Cavalcade\Plugin\EMPTY_DELETED_AT;
 
 /**
  * Test deleting events.
@@ -51,11 +52,11 @@ class Tests_Deletion extends WP_UnitTestCase {
 		wp_schedule_single_event( $timestamp, __FUNCTION__ );
 		$before = time();
 		sleep( 1 );
-		// status transition: waiting -> running 
+		// status transition: waiting -> running
 		$wpdb->query( $wpdb->prepare(
 			"UPDATE {$wpdb->base_prefix}cavalcade_jobs SET status = 'running' WHERE hook = %s",
 			[ __FUNCTION__ ] ) );
-		
+
 		wp_unschedule_event( $timestamp, __FUNCTION__ );
 		sleep( 1 );
 		$after = time();
@@ -87,8 +88,9 @@ class Tests_Deletion extends WP_UnitTestCase {
 		sleep( 1 );
 		$after = time();
 
+		$empty_deleted_at = EMPTY_DELETED_AT;
 		$query = $wpdb->prepare(
-			"SELECT * FROM {$wpdb->base_prefix}cavalcade_jobs WHERE hook = %s AND deleted_at IS NOT NULL",
+			"SELECT * FROM {$wpdb->base_prefix}cavalcade_jobs WHERE hook = %s AND deleted_at != '$empty_deleted_at'",
 			[ __FUNCTION__ ] );
 
 		$results = $wpdb->get_results( $query );

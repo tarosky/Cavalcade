@@ -2,6 +2,8 @@
 namespace HM\Cavalcade\Tests;
 
 use WP_UnitTestCase;
+use const HM\Cavalcade\Plugin\EMPTY_DELETED_AT;
+
 
 /**
  * Test timestamps of lifecycle.
@@ -54,7 +56,7 @@ class Tests_Timestamps extends WP_UnitTestCase {
 		$this->assertBetweenTime( $before, $after, $this->asEpoch( $result->revised_at ) );
 		$this->assertNull( $result->started_at );
 		$this->assertNull( $result->finished_at );
-		$this->assertNull( $result->deleted_at );
+		$this->assertEquals( EMPTY_DELETED_AT, $result->deleted_at );
 	}
 
 	function test_schedule_event() {
@@ -72,7 +74,7 @@ class Tests_Timestamps extends WP_UnitTestCase {
 		$this->assertBetweenTime( $before, $after, $this->asEpoch( $result->revised_at ) );
 		$this->assertNull( $result->started_at );
 		$this->assertNull( $result->finished_at );
-		$this->assertNull( $result->deleted_at );
+		$this->assertEquals( EMPTY_DELETED_AT, $result->deleted_at );
 	}
 
 	function test_unschedule_event() {
@@ -123,6 +125,6 @@ class Tests_Timestamps extends WP_UnitTestCase {
 		$this->assertBetweenTime( $before_rev, $after_rev, $this->asEpoch( $result->revised_at ) );
 		$this->assertNull( $result->started_at );
 		$this->assertNull( $result->finished_at );
-		$this->assertNull( $result->deleted_at );
+		$this->assertEquals( EMPTY_DELETED_AT, $result->deleted_at );
 	}
 }

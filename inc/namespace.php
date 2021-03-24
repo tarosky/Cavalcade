@@ -87,12 +87,13 @@ function create_tables() {
 
 	$charset_collate = $wpdb->get_charset_collate();
 
+	$empty_deleted_at = EMPTY_DELETED_AT;
 	$query = "CREATE TABLE IF NOT EXISTS `{$wpdb->base_prefix}cavalcade_jobs` (
 		`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 
 		`site` bigint(20) unsigned NOT NULL,
 		`hook` varchar(255) NOT NULL,
-		`hook_instance` varchar(255) DEFAULT NULL,
+		`hook_instance` varchar(255) NOT NULL DEFAULT '',
 		`args` longtext NOT NULL,
 		`args_digest` char(64) NOT NULL,
 
@@ -104,10 +105,10 @@ function create_tables() {
 		`revised_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		`started_at` datetime DEFAULT NULL,
 		`finished_at` datetime DEFAULT NULL,
-		`deleted_at` datetime DEFAULT NULL,
+		`deleted_at` datetime NOT NULL DEFAULT '$empty_deleted_at',
 
 		PRIMARY KEY (`id`),
-		UNIQUE KEY `uniqueness` (`site`, `hook`, `hook_instance`, `args_digest`),
+		UNIQUE KEY `uniqueness` (`site`, `hook`, `hook_instance`, `args_digest`, `deleted_at`),
 		KEY `status` (`status`, `deleted_at`),
 		KEY `status-finished_at` (`status`, `finished_at`),
 		KEY `site` (`site`, `deleted_at`),

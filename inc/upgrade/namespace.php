@@ -6,6 +6,7 @@
 namespace HM\Cavalcade\Plugin\Upgrade;
 
 use const HM\Cavalcade\Plugin\DATABASE_VERSION;
+use const HM\Cavalcade\Plugin\EMPTY_DELETED_AT;
 use HM\Cavalcade\Plugin as Cavalcade;
 use HM\Cavalcade\Plugin\Job;
 use WP_CLI;
@@ -60,6 +61,10 @@ function upgrade_database() {
 
 	if ( $database_version < 11 ) {
 		upgrade_database_11();
+	}
+
+	if ( $database_version < 12 ) {
+		upgrade_database_12();
 	}
 
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
@@ -252,7 +257,7 @@ function upgrade_database_10() {
 /**
  * Upgrade Cavalcade database tables to version 11.
  *
- * Delete old-formatted data.
+ * Apply unique constraint.
  */
 function upgrade_database_11() {
 	global $wpdb;
@@ -328,5 +333,51 @@ function upgrade_database_11() {
 	$wpdb->query( $query );
 	if ( $wpdb->last_error !== '' ) {
 		WP_CLI::error( "Error on 11-7: $wpdb->last_error" );
+	}
+}
+
+/**
+ * Upgrade Cavalcade database tables to version 12.
+ *
+ * Fix incorrect unique constraint.
+ */
+function upgrade_database_12() {
+	global $wpdb;
+
+	$query = "UPDATE `{$wpdb->base_prefix}cavalcade_jobs`
+			  SET `hook_instance` = ''
+			  WHERE `hook_instance` IS NULL";
+
+	$wpdb->query( $query );
+	if ( $wpdb->last_error !== '' ) {
+		WP_CLI::error( "Error on 12-1: $wpdb->last_error" );
+	}
+
+	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
+			  MODIFY `hook_instance` varchar(255) NOT NULL DEFAULT ''";
+
+	$wpdb->query( $query );
+	if ( $wpdb->last_error !== '' ) {
+		WP_CLI::error( "Error on 12-2: $wpdb->last_error" );
+	}
+
+	$empty_deleted_at = EMPTY_DELETED_AT;
+	$query = "UPDATE `{$wpdb->base_prefix}cavalcade_jobs`
+			  SET `deleted_at` = '$empty_deleted_at'
+			  WHERE `deleted_at` IS NULL";
+
+	$wpdb->query( $query );
+	if ( $wpdb->last_error !== '' ) {
+		WP_CLI::error( "Error on 12-1: $wpdb->last_error" );
+	}
+
+	$query = "ALTER TABLE `{$wpdb->base_prefix}cavalcade_jobs`
+			  MODIFY `deleted_at` datetime NOT NULL DEFAULT '$empty_deleted_at',
+			  DROP INDEX `uniqueness`,
+			  ADD UNIQUE KEY `uniqueness` (`site`, `hook`, `hook_instance`, `args_digest`, `deleted_at`)";
+
+	$wpdb->query( $query );
+	if ( $wpdb->last_error !== '' ) {
+		WP_CLI::error( "Error on 12-3: $wpdb->last_error" );
 	}
 }

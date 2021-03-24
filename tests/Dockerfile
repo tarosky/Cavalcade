@@ -20,6 +20,7 @@ RUN /build/install-composer
 ARG uid
 ARG gid
 ARG wp_version
+COPY db.php /db.php
 RUN /build/install-wp "${uid}" "${gid}" "${wp_version}"
 RUN rm -fr /build
 
