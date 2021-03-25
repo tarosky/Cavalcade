@@ -6,7 +6,7 @@ target=work/cavalcade
 
 rm -fr "$target" "$target.zip"
 mkdir -p "$target"
-cp -R inc plugin.php LICENSE.txt "$target"
+cp -R inc plugin.php db.php LICENSE.txt "$target"
 {
   cd work
   zip -r cavalcade.zip cavalcade

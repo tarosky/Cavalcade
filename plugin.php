@@ -12,7 +12,10 @@
 namespace HM\Cavalcade\Plugin;
 
 const DATE_FORMAT = 'Y-m-d H:i:s';
-const DATABASE_VERSION = 11;
+// Don't use '0000-00-00' since it has many pitfalls.
+const EMPTY_DELETED_AT = '9999-12-31 23:59:59';
+const ER_DUP_ENTRY = 1062;
+const DATABASE_VERSION = 12;
 
 require __DIR__ . '/inc/namespace.php';
 require __DIR__ . '/inc/class-job.php';

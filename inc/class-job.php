@@ -40,6 +40,19 @@ class Job {
 		return ! empty( $this->interval );
 	}
 
+	private function print_last_error() {
+		global $wpdb;
+
+		wp_load_translations_early();
+
+		$error_str = sprintf(
+			__( 'WordPress database error %1$s for query %2$s made by %3$s' ),
+			$wpdb->last_error,
+			$wpdb->last_query,
+			$wpdb->get_caller() );
+		error_log( $error_str );
+	}
+
 	public function save() {
 		global $wpdb;
 
@@ -54,11 +67,10 @@ class Job {
 
 		if ( $this->is_recurring() ) {
 			$data['interval'] = $this->interval;
-			if ( get_database_version() >= 2 ) {
-				$data['schedule'] = $this->schedule;
-			}
+			$data['schedule'] = $this->schedule;
+			$data['hook_instance'] = '';
 		} else {
-			$data['hook_instance'] = $this->hook_instance;
+			$data['hook_instance'] = $data['nextrun'];
 		}
 
 		if ( $this->is_created() ) {
@@ -66,14 +78,50 @@ class Job {
 			$where = [
 				'id' => $this->id,
 			];
-			$result = $wpdb->update( $this->get_table(), $data, $where, $this->row_format( $data ), $this->row_format( $where ) );
+			$suppress_errors = $wpdb->suppress_errors();
+			try {
+				$wpdb->update( $this->get_table(), $data, $where, $this->row_format( $data ), $this->row_format( $where ) );
+				switch ( mysqli_errno( $wpdb->getDbh() ) ) {
+				case ER_DUP_ENTRY:
+					$wpdb->delete( $this->get_table(), $where, $this->row_format( $where ) );
+					if ( mysqli_errno( $wpdb->getDbh() ) !== 0 ) {
+						$this->print_last_error();
+						return;
+					}
+					self::flush_query_cache();
+					wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
+					return;
+				case 0:
+					self::flush_query_cache();
+					wp_cache_set( "job::{$this->id}", $this, 'cavalcade-jobs' );
+					return;
+				default:
+					$this->print_last_error();
+					return;
+				}
+			} finally {
+				$wpdb->suppress_errors($suppress_errors);
+			}
 		} else {
-			$result = $wpdb->insert( $this->get_table(), $data, $this->row_format( $data ) );
-			$this->id = $wpdb->insert_id;
+			$suppress_errors = $wpdb->suppress_errors();
+			try {
+				$wpdb->insert( $this->get_table(), $data, $this->row_format( $data ) );
+				switch ( mysqli_errno( $wpdb->getDbh() ) ) {
+				case ER_DUP_ENTRY:
+					return;
+				case 0:
+					$this->id = $wpdb->insert_id;
+					self::flush_query_cache();
+					wp_cache_set( "job::{$this->id}", $this, 'cavalcade-jobs' );
+					return;
+				default:
+					$this->print_last_error();
+					return;
+				}
+			} finally {
+				$wpdb->suppress_errors($suppress_errors);
+			}
 		}
-
-		self::flush_query_cache();
-		wp_cache_set( "job::{$this->id}", $this, 'cavalcade-jobs' );
 	}
 
 	public function delete() {
@@ -87,12 +135,26 @@ class Job {
 		$where = [
 			'id' => $this->id,
 		];
-		$result = $wpdb->update( $this->get_table(), $data, $where, $this->row_format( $data ), $this->row_format( $where ) );
-
-		self::flush_query_cache();
-		wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
-
-		return (bool) $result;
+		$suppress_errors = $wpdb->suppress_errors();
+		try {
+			$wpdb->update( $this->get_table(), $data, $where, $this->row_format( $data ), $this->row_format( $where ) );
+			switch ( mysqli_errno( $wpdb->getDbh() ) ) {
+			case ER_DUP_ENTRY:
+				$wpdb->delete( $this->get_table(), $where, $this->row_format( $where ) );
+				self::flush_query_cache();
+				wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
+				return true;
+			case 0:
+				self::flush_query_cache();
+				wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
+				return true;
+			default:
+				$this->print_last_error();
+				return false;
+			}
+		} finally {
+			$wpdb->suppress_errors($suppress_errors);
+		}
 	}
 
 	public static function get_table() {
@@ -216,6 +278,7 @@ class Job {
 	 *
 	 * @param array|\stdClass $args {
 	 *     @param string          $hook      Jobs hook to return. Optional.
+	 *     @param string          $hook_instance Hook instance. Optional.
 	 *     @param int|string|null $timestamp Timestamp to search for. Optional.
 	 *                                       String shortcuts `future`: > NOW(); `past`: <= NOW()
 	 *     @param array           $args      Cron job arguments.
@@ -234,6 +297,7 @@ class Job {
 		$defaults = [
 			'timestamp' => null,
 			'hook' => null,
+			'hook_instance' => null,
 			'args' => [],
 			'site' => get_current_blog_id(),
 			'statuses' => [ 'waiting', 'running' ],
@@ -252,6 +316,7 @@ class Job {
 		 *
 		 * @param array $args {
 		 *     @param string           $hook      Jobs hook to return. Optional.
+		 *     @param string           $hook_instance Hook instance. Optional.
 		 *     @param int|string|array $timestamp Timestamp to search for. Optional.
 		 *                                        String shortcuts `future`: > NOW(); `past`: <= NOW()
 		 *                                        Array of 2 time stamps will search between those dates.
@@ -300,13 +365,9 @@ class Job {
 			$sql_params[] = $args['hook'];
 		}
 
-		if ( array_key_exists( 'hook_instance', $args ) ) {
-			if ( $args['hook_instance'] === null ) {
-				$sql .= ' AND hook_instance IS NULL';
-			} else {
-				$sql .= ' AND hook_instance = %s';
-				$sql_params[] = $args['hook_instance'];
-			}
+		if ( ! is_null( $args['hook_instance'] ) ) {
+			$sql .= ' AND hook_instance = %s';
+			$sql_params[] = $args['hook_instance'];
 		}
 
 		if ( ! is_null( $args['args'] ) ) {
@@ -342,7 +403,8 @@ class Job {
 		$sql .= ' AND status IN(' . implode( ',', array_fill( 0, count( $args['statuses'] ), '%s' ) ) . ')';
 		$sql_params = array_merge( $sql_params, $args['statuses'] );
 
-		$sql .= ' AND deleted_at IS NULL';
+		$empty_deleted_at = EMPTY_DELETED_AT;
+		$sql .= " AND deleted_at = '$empty_deleted_at'";
 
 		$sql .= ' ORDER BY nextrun';
 		if ( $args['order'] === 'DESC' ) {

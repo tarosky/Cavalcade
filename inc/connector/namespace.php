@@ -9,6 +9,9 @@ use HM\Cavalcade\Plugin as Cavalcade;
 use HM\Cavalcade\Plugin\Job;
 use WP_Error;
 
+use const HM\Cavalcade\Plugin\EMPTY_DELETED_AT;
+use const HM\Cavalcade\Plugin\DATE_FORMAT;
+
 /**
  * Register hooks for WordPress.
  */
@@ -111,7 +114,7 @@ function pre_schedule_event( $pre, $event, $wp_error = false ) {
 	// The job exists.
 	$existing = $jobs[0];
 
-	$schedule_match = Cavalcade\get_database_version() >= 2 && $existing->schedule === $event->schedule;
+	$schedule_match = $existing->schedule === $event->schedule;
 
 	if ( $schedule_match && $existing->interval === null && ! isset( $event->interval ) ) {
 		// Unchanged or duplicate single event.
@@ -136,10 +139,7 @@ function pre_schedule_event( $pre, $event, $wp_error = false ) {
 			return false;
 		}
 	} else {
-		// Event has changed. Update it.
-		if ( Cavalcade\get_database_version() >= 2 ) {
-			$existing->schedule = $event->schedule;
-		}
+		$existing->schedule = $event->schedule;
 		if ( isset( $event->interval ) ) {
 			$existing->interval = $event->interval;
 		} else {
@@ -180,10 +180,9 @@ function pre_reschedule_event( $pre, $event, $wp_error = false ) {
 	}
 
 	if ( $event->schedule === false ) {
-		return new WP_Error(
-			'false schedule is not allowed',
-			__( 'Rescheduling to false schedule is not allowed.' )
-		);
+		$hook_instance = gmdate( DATE_FORMAT, $event->timestamp );
+	} else {
+		$hook_instance = '';
 	}
 
 	// First check if the job exists already.
@@ -191,7 +190,7 @@ function pre_reschedule_event( $pre, $event, $wp_error = false ) {
 		'hook' => $event->hook,
 		'timestamp' => $event->timestamp,
 		'args' => $event->args,
-		'hook_instance' => null,
+		'hook_instance' => $hook_instance,
 	] );
 
 	if ( is_wp_error( $jobs ) || empty( $jobs ) ) {
@@ -330,13 +329,14 @@ function pre_clear_scheduled_hook( $pre, $hook, $args, $wp_error = false ) {
 
 
 	$sql = "UPDATE `{$table}` SET deleted_at = %s WHERE site = %d";
-	$sql_params[] = date( Cavalcade\DATE_FORMAT );
+	$sql_params[] = date( DATE_FORMAT );
 	$sql_params[] = get_current_blog_id();
 
 	$sql .= ' AND id IN(' . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ')';
 	$sql_params = array_merge( $sql_params, $ids );
 
-	$sql .= ' AND deleted_at IS NULL';
+	$empty_deleted_at = EMPTY_DELETED_AT;
+	$sql .= " AND deleted_at = '$empty_deleted_at'";
 
 	$query = $wpdb->prepare( $sql, $sql_params );
 	$results = $wpdb->query( $query );
@@ -492,7 +492,7 @@ function schedule_event( $event ) {
 	$job = new Job();
 	$job->site = get_current_blog_id();
 	$job->hook = $event->hook;
-	$job->hook_instance = gmdate( Cavalcade\DATE_FORMAT, $event->timestamp );
+	$job->hook_instance = gmdate( DATE_FORMAT, $event->timestamp );
 	$job->args = $event->args;
 
 	$job->nextrun = $event->timestamp;

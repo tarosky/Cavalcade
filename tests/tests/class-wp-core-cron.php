@@ -43,4 +43,8 @@ class Tests_WpCron extends Tests_Cron {
 	public function test_cron_array_error_is_returned_when_unscheduling_event() {
 		$this->markTestSkipped( 'Incompatible with Cavalcade' );
 	}
+
+	public function test_get_scheduled_event_recurring() {
+		$this->markTestSkipped( 'Incompatible with Cavalcade' );
+	}
 }
