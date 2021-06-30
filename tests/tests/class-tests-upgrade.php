@@ -50,14 +50,22 @@ class Tests_Upgrade extends WP_UnitTestCase {
 	}
 
 	private static function upgrade() {
-		Upgrade\upgrade_database_10();
-		Upgrade\upgrade_database_11();
-		Upgrade\upgrade_database_12();
+		update_site_option( 'cavalcade_db_version', 9 );
+		Upgrade\upgrade_database();
 	}
 
 	public function tearDown() {
 		Plugin\create_tables();
 		parent::tearDown();
+	}
+
+	public function test_db_version() {
+		global $wpdb;
+
+		Plugin\drop_tables();
+		$wpdb->query( $this->v9schema );
+		self::upgrade();
+		$this->assertEquals( 12, get_site_option( 'cavalcade_db_version' ) );
 	}
 
 	public function test_indices() {
