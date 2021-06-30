@@ -27,44 +27,49 @@ function upgrade_database() {
 		return false;
 	}
 
-	if ( $database_version < 2 ) {
-		upgrade_database_2();
-	}
+	lock_table();
+	try {
+		if ( $database_version < 2 ) {
+			upgrade_database_2();
+		}
 
-	if ( $database_version < 3 ) {
-		upgrade_database_3();
-	}
+		if ( $database_version < 3 ) {
+			upgrade_database_3();
+		}
 
-	if ( $database_version < 4 ) {
-		upgrade_database_4();
-	}
+		if ( $database_version < 4 ) {
+			upgrade_database_4();
+		}
 
-	if ( $database_version < 5 ) {
-		upgrade_database_5();
-	}
+		if ( $database_version < 5 ) {
+			upgrade_database_5();
+		}
 
-	if ( $database_version < 6 ) {
-		upgrade_database_6();
-	}
+		if ( $database_version < 6 ) {
+			upgrade_database_6();
+		}
 
-	if ( $database_version < 7 ) {
-		upgrade_database_7();
-	}
+		if ( $database_version < 7 ) {
+			upgrade_database_7();
+		}
 
-	if ( $database_version < 9 ) {
-		upgrade_database_9();
-	}
+		if ( $database_version < 9 ) {
+			upgrade_database_9();
+		}
 
-	if ( $database_version < 10 ) {
-		upgrade_database_10();
-	}
+		if ( $database_version < 10 ) {
+			upgrade_database_10();
+		}
 
-	if ( $database_version < 11 ) {
-		upgrade_database_11();
-	}
+		if ( $database_version < 11 ) {
+			upgrade_database_11();
+		}
 
-	if ( $database_version < 12 ) {
-		upgrade_database_12();
+		if ( $database_version < 12 ) {
+			upgrade_database_12();
+		}
+	} finally {
+		unlock_table();
 	}
 
 	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
@@ -73,6 +78,24 @@ function upgrade_database() {
 
 	// Upgrade successful.
 	return true;
+}
+
+function lock_table() {
+	global $wpdb;
+
+	$wpdb->query( "LOCK TABLES `{$wpdb->base_prefix}cavalcade_jobs` WRITE" );
+	if ( $wpdb->last_error !== '' ) {
+		WP_CLI::error( "Error on table lock: $wpdb->last_error" );
+	}
+}
+
+function unlock_table() {
+	global $wpdb;
+
+	$wpdb->query( 'UNLOCK TABLES' );
+	if ( $wpdb->last_error !== '' ) {
+		WP_CLI::error( "Error on table unlock: $wpdb->last_error" );
+	}
 }
 
 /**
