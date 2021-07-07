@@ -40,7 +40,7 @@ class Job {
 		return ! empty( $this->interval );
 	}
 
-	private function print_last_error() {
+	private static function print_last_error() {
 		global $wpdb;
 
 		wp_load_translations_early();
@@ -85,18 +85,22 @@ class Job {
 				case ER_DUP_ENTRY:
 					$wpdb->delete( $this->get_table(), $where, $this->row_format( $where ) );
 					if ( mysqli_errno( $wpdb->getDbh() ) !== 0 ) {
-						$this->print_last_error();
+						self::print_last_error();
 						return;
 					}
 					self::flush_query_cache();
 					wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
+					return;
+				case ER_NO_SUCH_TABLE:
+					self::show_no_table_error();
+					self::print_last_error();
 					return;
 				case 0:
 					self::flush_query_cache();
 					wp_cache_set( "job::{$this->id}", $this, 'cavalcade-jobs' );
 					return;
 				default:
-					$this->print_last_error();
+					self::print_last_error();
 					return;
 				}
 			} finally {
@@ -109,13 +113,17 @@ class Job {
 				switch ( mysqli_errno( $wpdb->getDbh() ) ) {
 				case ER_DUP_ENTRY:
 					return;
+				case ER_NO_SUCH_TABLE:
+					self::show_no_table_error();
+					self::print_last_error();
+					return;
 				case 0:
 					$this->id = $wpdb->insert_id;
 					self::flush_query_cache();
 					wp_cache_set( "job::{$this->id}", $this, 'cavalcade-jobs' );
 					return;
 				default:
-					$this->print_last_error();
+					self::print_last_error();
 					return;
 				}
 			} finally {
@@ -144,12 +152,16 @@ class Job {
 				self::flush_query_cache();
 				wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
 				return true;
+			case ER_NO_SUCH_TABLE:
+				self::show_no_table_error();
+				self::print_last_error();
+				return;
 			case 0:
 				self::flush_query_cache();
 				wp_cache_delete( "job::{$this->id}", 'cavalcade-jobs' );
 				return true;
 			default:
-				$this->print_last_error();
+				self::print_last_error();
 				return false;
 			}
 		} finally {
@@ -224,8 +236,22 @@ class Job {
 		}
 
 		$suppress = $wpdb->suppress_errors();
-		$job = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . static::get_table() . ' WHERE id = %d', $job ) );
-		$wpdb->suppress_errors( $suppress );
+		try {
+			$job = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . static::get_table() . ' WHERE id = %d', $job ) );
+			switch ( mysqli_errno( $wpdb->getDbh() ) ) {
+			case ER_NO_SUCH_TABLE:
+				self::show_no_table_error();
+				self::print_last_error();
+				return null;
+			case 0:
+				break;
+			default:
+				self::print_last_error();
+				return null;
+			}
+		} finally {
+			$wpdb->suppress_errors( $suppress );
+		}
 
 		if ( ! $job ) {
 			return null;
@@ -425,7 +451,24 @@ class Job {
 
 		if ( false === $results ) {
 			$query = $wpdb->prepare( $sql, $sql_params );
-			$results = $wpdb->get_results( $query );
+			$suppress = $wpdb->suppress_errors();
+			try {
+				$results = $wpdb->get_results( $query );
+				switch ( $errno = mysqli_errno( $wpdb->getDbh() ) ) {
+				case ER_NO_SUCH_TABLE:
+					self::show_no_table_error();
+					self::print_last_error();
+					return new WP_Error( 'cavalcade.no_table' );
+				case 0:
+					break;
+				default:
+					self::print_last_error();
+					return new WP_Error( 'cavalcade.database' );
+				}
+			} finally {
+				$wpdb->suppress_errors( $suppress );
+			}
+
 			wp_cache_set( "jobs::{$query_hash}", $results, 'cavalcade-jobs' );
 		}
 
@@ -487,5 +530,9 @@ class Job {
 			$format[] = static::column_format( $field );
 		}
 		return $format;
+	}
+
+	private static function show_no_table_error() {
+		error_log( '[Error] No Cavalcade database table exists. (Re)start cavalcade-runner service to create.' );
 	}
 }

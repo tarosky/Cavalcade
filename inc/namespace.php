@@ -12,12 +12,6 @@ use WP_CLI;
  */
 function bootstrap() {
 	register_cache_groups();
-
-	if ( ! is_installed() && ! create_tables() ) {
-		add_action( 'wp_install', __NAMESPACE__ . '\\bootstrap' );
-		return;
-	}
-
 	register_cli_commands();
 	maybe_populate_site_option();
 	Connector\bootstrap();
@@ -41,98 +35,6 @@ function register_cli_commands() {
 
 	require __DIR__ . '/class-command.php';
 	WP_CLI::add_command( 'cavalcade', __NAMESPACE__ . '\\Command' );
-}
-
-/**
- * Is the plugin installed?
- *
- * Used during the plugin's bootstrapping process to create the table. This
- * should return true pretty much all the time.
- *
- * @return boolean
- */
-function is_installed() {
-	global $wpdb;
-
-	if ( wp_cache_get( 'installed', 'cavalcade' ) ) {
-		return true;
-	}
-
-	$installed = ( count( $wpdb->get_col( "SHOW TABLES LIKE '{$wpdb->base_prefix}cavalcade_%'" ) ) === 2 );
-
-	if ( $installed ) {
-		// Don't check again :)
-		wp_cache_set( 'installed', $installed, 'cavalcade' );
-	}
-
-	return $installed;
-}
-
-/**
- * This code is for testing purpose
- */
-function drop_tables() {
-	global $wpdb;
-
-	$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->base_prefix}cavalcade_jobs`" );
-}
-
-function create_tables() {
-	if ( ! is_blog_installed() ) {
-		// Do not create tables before blog is installed.
-		return false;
-	}
-
-	global $wpdb;
-
-	$charset_collate = $wpdb->get_charset_collate();
-
-	$empty_deleted_at = EMPTY_DELETED_AT;
-	$query = "CREATE TABLE IF NOT EXISTS `{$wpdb->base_prefix}cavalcade_jobs` (
-		`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-
-		`site` bigint(20) unsigned NOT NULL,
-		`hook` varchar(255) NOT NULL,
-		`hook_instance` varchar(255) NOT NULL DEFAULT '',
-		`args` longtext NOT NULL,
-		`args_digest` char(64) NOT NULL,
-
-		`nextrun` datetime NOT NULL,
-		`interval` int unsigned DEFAULT NULL,
-		`status` enum('waiting','running','done') NOT NULL DEFAULT 'waiting',
-		`schedule` varchar(255) DEFAULT NULL,
-		`registered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		`revised_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		`started_at` datetime DEFAULT NULL,
-		`finished_at` datetime DEFAULT NULL,
-		`deleted_at` datetime NOT NULL DEFAULT '$empty_deleted_at',
-
-		PRIMARY KEY (`id`),
-		UNIQUE KEY `uniqueness` (`site`, `hook`, `hook_instance`, `args_digest`, `deleted_at`),
-		KEY `status` (`status`, `deleted_at`),
-		KEY `status-finished_at` (`status`, `finished_at`),
-		KEY `site` (`site`, `deleted_at`),
-		KEY `hook` (`hook`, `deleted_at`)
-	) ENGINE=InnoDB {$charset_collate};\n";
-
-	// TODO: check return value
-	$wpdb->query( $query );
-
-	wp_cache_set( 'installed', true, 'cavalcade' );
-	update_site_option( 'cavalcade_db_version', DATABASE_VERSION );
-
-	/**
-	 * Ensure site meta is populated when running the WP CLI script to
-	 * install a network. Using the CLI, WP installs a single site with
-	 * wp_install() and then upgrades it to a multiste install immediately.
-	 *
-	 * Note: This does not work for multisite manual installs.
-	 */
-	add_filter( 'populate_network_meta', function ( $site_meta ) {
-		$site_meta['cavalcade_db_version'] = DATABASE_VERSION;
-		return $site_meta;
-	} );
-	return true;
 }
 
 /**
@@ -162,8 +64,6 @@ function maybe_populate_site_option() {
  * @return Job[] List of jobs on the site.
  */
 function get_jobs( $site = null ) {
-	global $wpdb;
-
 	if ( empty( $site ) ) {
 		$site = get_current_blog_id();
 	}
@@ -211,20 +111,4 @@ function get_schedule_by_interval( $interval = null ) {
 	}
 
 	return '__fake_schedule';
-}
-
-/**
- * Get the current Cavalcade database schema version.
- *
- * @return int Database schema version.
- */
-function get_database_version() {
-	$version = (int) get_site_option( 'cavalcade_db_version' );
-
-	// Normalise schema version for unset option.
-	if ( $version < 2 ) {
-		$version = 1;
-	}
-
-	return $version;
 }
