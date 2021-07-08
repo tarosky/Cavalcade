@@ -15,12 +15,11 @@ const DATE_FORMAT = 'Y-m-d H:i:s';
 // Don't use '0000-00-00' since it has many pitfalls.
 const EMPTY_DELETED_AT = '9999-12-31 23:59:59';
 const ER_DUP_ENTRY = 1062;
-const DATABASE_VERSION = 12;
+const ER_NO_SUCH_TABLE = 1146;
 
 require __DIR__ . '/inc/namespace.php';
 require __DIR__ . '/inc/class-job.php';
 require __DIR__ . '/inc/connector/namespace.php';
-require __DIR__ . '/inc/upgrade/namespace.php';
 
 bootstrap();
 
