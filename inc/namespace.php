@@ -13,7 +13,6 @@ use WP_CLI;
 function bootstrap() {
 	register_cache_groups();
 	register_cli_commands();
-	maybe_populate_site_option();
 	Connector\bootstrap();
 }
 
@@ -35,26 +34,6 @@ function register_cli_commands() {
 
 	require __DIR__ . '/class-command.php';
 	WP_CLI::add_command( 'cavalcade', __NAMESPACE__ . '\\Command' );
-}
-
-/**
- * Populate the Cavalcade db version when upgrading to multisite.
- *
- * This ensures the database option is copied from the options table
- * accross to the sitemeta table when WordPress is upgraded from
- * a single site install to a multisite install.
- */
-function maybe_populate_site_option() {
-	if ( is_multisite() ) {
-		return;
-	}
-
-	$set_site_meta = function ( $site_meta ) {
-		$site_meta['cavalcade_db_version'] = get_option( 'cavalcade_db_version' );
-		return $site_meta;
-	};
-
-	add_filter( 'populate_network_meta', $set_site_meta );
 }
 
 /**
